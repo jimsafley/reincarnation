@@ -36,26 +36,30 @@ people = json.loads(f.read())
 
 for person in people['results']['bindings']:
     
-    uri = person['person']['value']
-    name = person['name']['value']
-    death_date = person['death_date']['value']
+    person_uri = person['person']['value']
+    person_name = person['name']['value']
+    person_death_date = person['death_date']['value']
     
-    # Some death dates have no year, ^^<http://www.w3.org/2001/XMLSchema#gMonthDay>
-    if '-' == death_date[0]:
+    # Some death dates have no year.
+    # ^^<http://www.w3.org/2001/XMLSchema#gMonthDay>
+    if person_death_date.startswith('-'):
         continue
     
-    (death_year, death_month, death_day) = death_date.split('-')
-    death_date = date(int(death_year), int(death_month), int(death_day))
+    (person_death_year, person_death_month, person_death_day) \
+        = person_death_date.split('-')
+    person_death_date = date(int(person_death_year), 
+                             int(person_death_month), 
+                             int(person_death_day))
     
     # Some death years do not match the provided death year.
-    if birth_date.year != death_date.year:
+    if birth_date.year != person_death_date.year:
         continue
     
     # Calculate the difference between the two dates in days.
-    timedelta = death_date - birth_date;
+    timedelta = person_death_date - birth_date;
     
     # Ignore people who died on a different month and day.
-    if 0 != timedelta.days:
+    if timedelta.days != 0:
         continue
     
-    print u'{0} {1} <{2}>'.format(death_date, name, uri)
+    print u'{0} {1} <{2}>'.format(person_death_date, person_name, person_uri)
