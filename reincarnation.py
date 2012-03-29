@@ -1,5 +1,4 @@
 #! /usr/bin/python
-# e.g. $ ./resurrection.py -d 1976-08-24
 
 import argparse
 from datetime import date
