@@ -23,11 +23,12 @@ data = urllib.urlencode({
 PREFIX foaf: <http://xmlns.com/foaf/0.1/>
 PREFIX dbpedia-owl: <http://dbpedia.org/ontology/>
 PREFIX dcterms: <http://purl.org/dc/terms/>
-SELECT ?person ?name ?death_date
+SELECT ?person ?name ?birth_date ?death_date
 WHERE {{
   ?person a foaf:Person .
   ?person dcterms:subject <http://dbpedia.org/resource/Category:{0}_deaths> .
   ?person foaf:name ?name .
+  ?person dbpedia-owl:birthDate ?birth_date .
   ?person dbpedia-owl:deathDate ?death_date .
 }}
 ORDER BY ?death_date'''.format(birth_date.year)
@@ -39,6 +40,7 @@ for person in people['results']['bindings']:
     
     person_uri = person['person']['value']
     person_name = person['name']['value']
+    person_birth_date = person['birth_date']['value']
     person_death_date = person['death_date']['value']
     
     # Some death dates have no year.
@@ -48,8 +50,7 @@ for person in people['results']['bindings']:
     
     (person_death_year, person_death_month, person_death_day) \
         = person_death_date.split('-')
-    person_death_date = date(int(person_death_year), 
-                             int(person_death_month), 
+    person_death_date = date(int(person_death_year), int(person_death_month), 
                              int(person_death_day))
     
     # Some death years do not match the provided death year.
@@ -63,4 +64,5 @@ for person in people['results']['bindings']:
     if timedelta.days != 0:
         continue
     
-    print u'{0} {1} <{2}>'.format(person_death_date, person_name, person_uri)
+    print u'{0}–{1} {2} <{3}>'.format(person_birth_date, person_death_date, 
+                                      person_name, person_uri)
