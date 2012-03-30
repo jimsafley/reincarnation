@@ -36,33 +36,32 @@ ORDER BY ?death_date'''.format(birth_date.year)
 f = urllib2.urlopen('http://dbpedia.org/sparql', data)
 people = json.loads(f.read())
 
-for person in people['results']['bindings']:
+for p in people['results']['bindings']:
     
-    person_uri = person['person']['value']
-    person_name = person['name']['value']
-    person_birth_date = person['birth_date']['value']
-    person_death_date = person['death_date']['value']
+    person = {'uri': p['person']['value'], 'name': p['name']['value'], 
+              'birth_date': p['birth_date']['value'], 
+              'death_date': p['death_date']['value']}
     
     # Some death dates have no year.
     # ^^<http://www.w3.org/2001/XMLSchema#gMonthDay>
-    if person_death_date.startswith('-'):
+    if person['death_date'].startswith('-'):
         continue
     
-    (person_death_year, person_death_month, person_death_day) \
-        = person_death_date.split('-')
-    person_death_date = date(int(person_death_year), int(person_death_month), 
-                             int(person_death_day))
+    (person['death_year'], person['death_month'], person['death_day']) \
+        = person['death_date'].split('-')
+    person['death_date'] = date(int(person['death_year']), 
+                                int(person['death_month']), 
+                                int(person['death_day']))
     
     # Some death years do not match the provided death year.
-    if birth_date.year != person_death_date.year:
+    if birth_date.year != person['death_date'].year:
         continue
     
     # Calculate the difference between the two dates in days.
-    timedelta = person_death_date - birth_date;
+    timedelta = person['death_date'] - birth_date;
     
     # Ignore people who died on a different month and day.
     if timedelta.days != 0:
         continue
     
-    print u'{0}–{1} {2} <{3}>'.format(person_birth_date, person_death_date, 
-                                      person_name, person_uri)
+    print u'{birth_date}–{death_date} {name} <{uri}>'.format(**person)
