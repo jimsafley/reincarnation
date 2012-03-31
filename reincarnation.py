@@ -2,22 +2,20 @@
 # coding: utf-8
 
 import argparse
-from datetime import date
 import urllib2
-import urllib
 import json
+from urllib import urlencode
+from datetime import date
 
-# Get the birth date.
+# Get the birth date from the command line arguments.
 parser = argparse.ArgumentParser()
 parser.add_argument("-d")
 args = parser.parse_args()
+birth_date = date(*map(int, args.d.split('-')))
 
-# Set the birth date.
-(birth_year, birth_month, birth_day) = args.d.split('-')
-birth_date = date(int(birth_year), int(birth_month), int(birth_day))
-
-# Query the DBpedia SPARQL endpoint.
-data = urllib.urlencode({
+# Query the DBpedia SPARQL endpoint. Select all people whose death date is 
+# identical to the provided birth date.
+data = urlencode({
     'format': 'application/sparql-results+json',
     'query': '''
 PREFIX foaf: <http://xmlns.com/foaf/0.1/>
@@ -25,43 +23,19 @@ PREFIX dbpedia-owl: <http://dbpedia.org/ontology/>
 PREFIX dcterms: <http://purl.org/dc/terms/>
 SELECT ?person ?name ?birth_date ?death_date
 WHERE {{
-  ?person a foaf:Person .
-  ?person dcterms:subject <http://dbpedia.org/resource/Category:{0}_deaths> .
-  ?person foaf:name ?name .
-  ?person dbpedia-owl:birthDate ?birth_date .
-  ?person dbpedia-owl:deathDate ?death_date .
+  ?person a foaf:Person ;
+          dcterms:subject <http://dbpedia.org/resource/Category:{0}_deaths> ;
+          foaf:name ?name ;
+          dbpedia-owl:birthDate ?birth_date ;
+          dbpedia-owl:deathDate ?death_date .
+  FILTER regex(?death_date, "{1}")
 }}
-ORDER BY ?death_date'''.format(birth_date.year)
+ORDER BY ?death_date'''.format(birth_date.year, birth_date)
 })
-f = urllib2.urlopen('http://dbpedia.org/sparql', data)
-people = json.loads(f.read())
+people = json.loads(urllib2.urlopen('http://dbpedia.org/sparql', data).read())
 
 for p in people['results']['bindings']:
-    
     person = {'uri': p['person']['value'], 'name': p['name']['value'], 
-              'birth_date': p['birth_date']['value'], 
-              'death_date': p['death_date']['value']}
-    
-    # Some death dates have no year.
-    # ^^<http://www.w3.org/2001/XMLSchema#gMonthDay>
-    if person['death_date'].startswith('-'):
-        continue
-    
-    (person['death_year'], person['death_month'], person['death_day']) \
-        = person['death_date'].split('-')
-    person['death_date'] = date(int(person['death_year']), 
-                                int(person['death_month']), 
-                                int(person['death_day']))
-    
-    # Some death years do not match the provided death year.
-    if birth_date.year != person['death_date'].year:
-        continue
-    
-    # Calculate the difference between the two dates in days.
-    timedelta = person['death_date'] - birth_date;
-    
-    # Ignore people who died on a different month and day.
-    if timedelta.days != 0:
-        continue
-    
+              'birth_date': date(*map(int, p['birth_date']['value'].split('-'))), 
+              'death_date': date(*map(int, p['death_date']['value'].split('-')))}
     print u'{birth_date}–{death_date} {name} <{uri}>'.format(**person)
